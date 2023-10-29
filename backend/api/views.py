@@ -15,9 +15,8 @@ from users.models import Follow
 
 from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly
-from .serializers import (FavoritesSerializer, FollowSerializer,
-                          IngredientsSerializer, ReadRecipesSerializer,
-                          ShoppingBasketsSerializer, TagsSerializer,
+from .serializers import (FollowSerializer, IngredientsSerializer,
+                          ReadRecipesSerializer, TagsSerializer,
                           WriteRecipeseSerializer)
 
 User = get_user_model()
@@ -75,7 +74,8 @@ class RecipesViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    @action(detail=True, methods=["POST"], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["POST"],
+            permission_classes=[IsAuthenticated])
     def favorite(self, request, pk=None):
         user = request.user
         recipe = get_object_or_404(Recipes, pk=pk)
@@ -91,7 +91,8 @@ class RecipesViewSet(viewsets.ModelViewSet):
         Favorites.objects.filter(user=user, recipe=recipe).delete()
         return Response(status=HTTPStatus.NO_CONTENT)
 
-    @action(detail=True, methods=["POST"], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["POST"],
+            permission_classes=[IsAuthenticated])
     def shopping_cart(self, request, pk=None):
         user = request.user
         recipe = get_object_or_404(Recipes, pk=pk)

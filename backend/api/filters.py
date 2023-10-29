@@ -4,16 +4,18 @@ from recipes.models import Ingredients, Recipes, Tags
 
 
 class IngredientFilter(FilterSet):
-    name = rest_framework.CharFilter(lookup_expr='istartswith')
+    name = rest_framework.CharFilter(lookup_expr="istartswith")
 
     class Meta:
         model = Ingredients
-        fields = ('name', )
+        fields = ("name",)
+
 
 class RecipeFilter(FilterSet):
     is_favorite = filters.BooleanFilter(method="filter_favorites")
     is_in_shopping_cart = filters.BooleanFilter(method="filter_shopping_cart")
-    author = filters.AllValuesMultipleFilter(field_name="author__id", label="Автор")
+    author = filters.AllValuesMultipleFilter(
+        field_name="author__id", label="Автор")
     tags = ModelMultipleChoiceFilter(
         field_name="tags__slug",
         to_field_name="slug",
