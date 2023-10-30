@@ -5,11 +5,11 @@ from django.db import models
 User = get_user_model()
 
 
-class Ingredients(models.Model):
+class Ingredient(models.Model):
     name = models.CharField(
-        verbose_name="Название ингредиента", max_length=300)
+        verbose_name="Название ингредиента", max_length=200)
     measurement_unit = models.CharField(
-        verbose_name="Единица измерения", max_length=150
+        verbose_name="Единица измерения", max_length=200
     )
 
     class Meta:
@@ -21,9 +21,9 @@ class Ingredients(models.Model):
         return f"{self.name}, {self.measurement_unit}."
 
 
-class Tags(models.Model):
-    name = models.CharField(verbose_name="Название тэга",
-                            max_length=100, unique=True)
+class Tag(models.Model):
+    name = models.CharField(
+        verbose_name="Название тэга", max_length=50, unique=True)
     color = models.CharField(
         verbose_name="Цвет HEX",
         max_length=7,
@@ -55,7 +55,7 @@ class Tags(models.Model):
         return self.name
 
 
-class Recipes(models.Model):
+class Recipe(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -64,20 +64,20 @@ class Recipes(models.Model):
     )
     name = models.CharField(
         verbose_name="Название",
-        max_length=300,
+        max_length=200,
     )
     image = models.ImageField(
         verbose_name="Фотография", upload_to="recipes/", blank=True
     )
     text = models.TextField(verbose_name="Описание")
     ingredients = models.ManyToManyField(
-        Ingredients,
+        Ingredient,
         verbose_name="Ингредиенты",
         related_name="recipes",
         through="IngredientsInRecipes",
     )
     tags = models.ManyToManyField(
-        Tags,
+        Tag,
         verbose_name="Теги",
         related_name="recipes",
     )
@@ -103,7 +103,7 @@ class Recipes(models.Model):
         return self.name
 
 
-class ShoppingBaskets(models.Model):
+class ShoppingBasket(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -111,7 +111,7 @@ class ShoppingBaskets(models.Model):
         related_name="list",
     )
     recipe = models.ForeignKey(
-        Recipes,
+        Recipe,
         on_delete=models.CASCADE,
         verbose_name="Рецепт",
         related_name="list",
@@ -122,15 +122,15 @@ class ShoppingBaskets(models.Model):
         verbose_name_plural = "Списки покупок"
         ordering = ("-id",)
         constraints = [
-            models.UniqueConstraint(
-                fields=("user", "recipe"), name="unique_list_user")
+            models.UniqueConstraint(fields=(
+                "user", "recipe"), name="unique_list_user")
         ]
 
     def __str__(self):
         return f"{self.user} {self.recipe}"
 
 
-class Favorites(models.Model):
+class Favorite(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -138,7 +138,7 @@ class Favorites(models.Model):
         related_name="favorites",
     )
     recipe = models.ForeignKey(
-        Recipes,
+        Recipe,
         on_delete=models.CASCADE,
         verbose_name="Рецепт",
         related_name="favorites",
@@ -148,23 +148,23 @@ class Favorites(models.Model):
         verbose_name = "Избранное"
         verbose_name_plural = "Избранное"
         constraints = [
-            models.UniqueConstraint(
-                fields=["user", "recipe"], name="unique_favorite")
+            models.UniqueConstraint(fields=["user", "recipe"],
+                                    name="unique_favorite")
         ]
 
     def __str__(self):
         return f"{self.user} {self.recipe}"
 
 
-class IngredientsInRecipes(models.Model):
+class IngredientInRecipe(models.Model):
     recipe = models.ForeignKey(
-        Recipes,
+        Recipe,
         on_delete=models.CASCADE,
         verbose_name="Рецепт",
         related_name="ingredient_list",
     )
     ingredient = models.ForeignKey(
-        Ingredients,
+        Ingredient,
         on_delete=models.CASCADE,
         verbose_name="Ингредиент",
         related_name="in_recipe",

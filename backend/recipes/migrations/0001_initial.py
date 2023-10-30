@@ -52,8 +52,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "measurement_unit",
-                    models.CharField(
-                        max_length=150, verbose_name="Единица измерения"),
+                    models.CharField(max_length=150, verbose_name="Единица измерения"),
                 ),
             ],
             options={

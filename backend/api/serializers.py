@@ -1,30 +1,9 @@
-from django.contrib.auth import get_user_model
-from djoser.serializers import UserCreateSerializer, UserSerializer
+from djoser.serializers import UserSerializer
 from drf_base64.fields import Base64ImageField
+from recipes.models import (Favorite, Ingredient, IngredientInRecipe, Recipe,
+                            ShoppingBasket, Tag)
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
-
-from recipes.models import (Favorites, Ingredients, IngredientsInRecipes,
-                            Recipes, ShoppingBaskets, Tags)
-from users.models import Follow
-
-User = get_user_model()
-
-
-class CustomUserCreateSerializer(UserCreateSerializer):
-    email = serializers.EmailField(
-        validators=[UniqueValidator(queryset=User.objects.all())]
-    )
-    username = serializers.CharField(
-        validators=[UniqueValidator(queryset=User.objects.all())]
-    )
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
-
-    class Meta:
-        model = User
-        fields = ("id", "email", "username",
-                  "first_name", "last_name", "password")
+from users.models import Follow, User
 
 
 class CustomUserListSerializer(UserSerializer):
@@ -38,20 +17,20 @@ class CustomUserListSerializer(UserSerializer):
 
     def get_is_subscribed(self, obj):
         user = self.context.get("request").user
-        return not user.is_anonymous and \
-            user.follower.filter(author=obj.id).exists()
+        return not user.is_anonymous and user.follower.filter(
+            author=obj.id).exists()
 
 
 class TagsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Tags
-        fields = "__all__"
+        model = Tag
+        fields = ("id", "name", "color", "slug")
 
 
 class IngredientsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Ingredients
-        fields = "__all__"
+        model = Ingredient
+        fields = ("id", "name", "measurement_unit")
 
 
 class ReadRecipesSerializer(serializers.ModelSerializer):
@@ -62,8 +41,19 @@ class ReadRecipesSerializer(serializers.ModelSerializer):
     is_in_shopping_cart = serializers.BooleanField(default=False)
 
     class Meta:
-        model = Recipes
-        fields = "__all__"
+        model = Recipe
+        fields = (
+            "id",
+            "tags",
+            "author",
+            "ingredients",
+            "is_favorited",
+            "is_in_shopping_cart",
+            "name",
+            "image",
+            "text",
+            "cooking_time",
+        )
 
     def get_ingredients(self, obj):
         return obj.ingredients.values(
@@ -76,13 +66,14 @@ class ReadRecipesSerializer(serializers.ModelSerializer):
 
 class WriteRecipeseSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Tags.objects.all())
+        many=True, queryset=Tag.objects.all())
     ingredients = serializers.ListSerializer(child=serializers.DictField())
     image = Base64ImageField()
 
     class Meta:
-        model = Recipes
-        fields = "__all__"
+        model = Recipe
+        fields = ("ingredients", "tags", "name",
+                  "image", "text", "cooking_time")
         read_only_fields = ("author",)
 
     def validate(self, data):
@@ -104,12 +95,12 @@ class WriteRecipeseSerializer(serializers.ModelSerializer):
     def add_ingredients_and_tags(self, instance, **validate_data):
         ingredients = validate_data["ingredients"]
         tags = validate_data["tags"]
-        for tag in tags:
-            instance.tags.add(tag)
+        instance.ingredients.set(ingredients)
+        instance.tags.set(*tags)
 
-        IngredientsInRecipes.objects.bulk_create(
+        IngredientInRecipe.objects.bulk_create(
             [
-                IngredientsInRecipes(
+                IngredientInRecipe(
                     recipe=instance,
                     ingredient_id=ingredient.get("id"),
                     amount=ingredient.get("amount"),
@@ -123,7 +114,7 @@ class WriteRecipeseSerializer(serializers.ModelSerializer):
         ingredients_data = validated_data.pop("ingredients")
         recipe = super().create(validated_data)
         for item in ingredients_data:
-            IngredientsInRecipes.objects.create(
+            IngredientInRecipe.objects.create(
                 recipe=recipe, ingredient_id=item["id"], amount=item["amount"]
             )
         return recipe
@@ -132,7 +123,7 @@ class WriteRecipeseSerializer(serializers.ModelSerializer):
         instance.ingredients.clear()
         ingredients_data = validated_data.pop("ingredients")
         for item in ingredients_data:
-            IngredientsInRecipes.objects.create(
+            IngredientInRecipe.objects.create(
                 recipe=instance, ingredient_id=item["id"],
                 amount=item["amount"]
             )
@@ -141,7 +132,7 @@ class WriteRecipeseSerializer(serializers.ModelSerializer):
 
 class AddingRecipesSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Recipes
+        model = Recipe
         fields = ("id", "name", "image", "cooking_time")
         read_only_fields = ("id", "name", "image", "cooking_time")
 
@@ -154,7 +145,7 @@ class FollowSerializer(serializers.ModelSerializer):
     last_name = serializers.ReadOnlyField(source="author.last_name")
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField()
 
     class Meta:
         model = Follow
@@ -212,10 +203,10 @@ class CheckFollowSerializer(serializers.ModelSerializer):
 
 class FavoritesSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipes.objects.all())
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
 
     class Meta:
-        model = Favorites
+        model = Favorite
         fields = ("user", "recipe")
 
     def validate(self, obj):
@@ -234,10 +225,10 @@ class FavoritesSerializer(serializers.ModelSerializer):
 
 class ShoppingBasketsSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipes.objects.all())
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
 
     class Meta:
-        model = ShoppingBaskets
+        model = ShoppingBasket
         fields = ("user", "recipe")
 
     def validate(self, obj):
