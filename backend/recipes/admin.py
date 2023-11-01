@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 
 from .models import (Favorite, Ingredient, IngredientInRecipe, Recipe,
                      ShoppingBasket, Tag)
@@ -9,8 +9,10 @@ from .models import (Favorite, Ingredient, IngredientInRecipe, Recipe,
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ("pk", "name", "measurement_unit")
     list_filter = ("name",)
-    list_editable = ("recipe", "ingredient", "amount")
     search_fields = ("name",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('recipe')
 
 
 @admin.register(Recipe)
@@ -21,12 +23,14 @@ class RecipeAdmin(admin.ModelAdmin):
     search_fields = ("name",)
 
     def number_of_favorites(self, obj):
-        return obj.favorites.count()
+        return obj.favorites_count
 
     def get_queryset(self, request):
         return (
-            super().get_queryset(request).annotate(
-                favorites_count=Count("favorites"))
+            super().get_queryset(request)
+            .select_related('author')
+            .prefetch_related(Prefetch('tags'), Prefetch('ingredients'))
+            .annotate(favorites_count=Count('favorites'))
         )
 
 
@@ -39,18 +43,16 @@ class TagAdmin(admin.ModelAdmin):
 @admin.register(IngredientInRecipe)
 class IngredientInRecipeAdmin(admin.ModelAdmin):
     list_display = ("pk", "recipe", "ingredient", "amount")
-    list_editable = ("recipe", "ingredient", "amount")
+    search_fields = ("recipe__name", "ingredient__name")
 
 
 @admin.register(ShoppingBasket)
 class ShoppingBasketAdmin(admin.ModelAdmin):
     list_display = ("pk", "user", "recipe")
-    list_editable = ("user", "recipe")
-    search_fields = ("user", "recipe")
+    search_fields = ("user__username", "recipe__name")
 
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
     list_display = ("pk", "user", "recipe")
-    list_editable = ("user", "recipe")
-    search_fields = ("name", "recipe")
+    search_fields = ("user__username", "recipe__name")

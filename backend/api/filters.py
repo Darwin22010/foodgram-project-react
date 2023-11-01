@@ -1,14 +1,13 @@
 from django_filters import (FilterSet, ModelMultipleChoiceFilter, filters,
                             rest_framework)
-
-from recipes.models import Ingredients, Recipes, Tags
+from recipes.models import Ingredient, Recipe, Tag
 
 
 class IngredientFilter(FilterSet):
     name = rest_framework.CharFilter(lookup_expr="istartswith")
 
     class Meta:
-        model = Ingredients
+        model = Ingredient
         fields = ("name",)
 
 
@@ -20,7 +19,7 @@ class RecipeFilter(FilterSet):
     tags = ModelMultipleChoiceFilter(
         field_name="tags__slug",
         to_field_name="slug",
-        queryset=Tags.objects.all(),
+        queryset=Tag.objects.all(),
     )
 
     def filter_favorites(self, queryset, name, value):
@@ -35,5 +34,5 @@ class RecipeFilter(FilterSet):
         return queryset
 
     class Meta:
-        model = Recipes
+        model = Recipe
         fields = ("author", "tags", "is_in_shopping_cart", "is_favorite")

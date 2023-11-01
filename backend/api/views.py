@@ -20,23 +20,6 @@ from .serializers import (FavoritesSerializer, FollowSerializer,
                           ShoppingBasketsSerializer, TagsSerializer,
                           WriteRecipeseSerializer)
 
-base_queryset = (
-    Recipe.objects.select_related("author")
-    .prefetch_related("tags", "ingredients")
-    .annotate(
-        is_favorited=Exists(
-            Favorite.objects.filter(
-                user=OuterRef("author_id"), recipe__pk=OuterRef("pk")
-            )
-        ),
-        is_in_shopping_cart=Exists(
-            ShoppingBasket.objects.filter(
-                user=OuterRef("author_id"), recipe__pk=OuterRef("pk")
-            )
-        ),
-    )
-)
-
 
 class ListRetrieveViewSet(
     viewsets.GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin
@@ -67,6 +50,24 @@ class RecipesViewSet(viewsets.ModelViewSet):
         return WriteRecipeseSerializer
 
     def get_queryset(self):
+        base_queryset = (
+            Recipe.objects.select_related("author")
+            .prefetch_related("tags", "ingredients")
+            .annotate(
+                is_favorited=Exists(
+                    Favorite.objects.filter(
+                        user=OuterRef("author_id"), 
+                        recipe__pk=OuterRef("pk")
+                )
+                ),
+                is_in_shopping_cart=Exists(
+                    ShoppingBasket.objects.filter(
+                        user=OuterRef("author_id"), 
+                        recipe__pk=OuterRef("pk")
+                    )
+                ),
+            )
+        )
         if self.request.user.is_authenticated:
             return base_queryset.filter(author=self.request.user)
         return base_queryset
@@ -118,11 +119,6 @@ class RecipesViewSet(viewsets.ModelViewSet):
                             status=HTTPStatus.BAD_REQUEST)
         return Response(status=HTTPStatus.NO_CONTENT)
 
-    @action(
-        methods=["GET"],
-        detail=False,
-        permission_classes=[IsAuthenticated],
-    )
     def generate_shopping_list(self, user):
         ingredients = (
             IngredientInRecipe.objects.filter(recipe__list__user=user)

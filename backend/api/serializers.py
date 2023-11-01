@@ -168,9 +168,6 @@ class FollowSerializer(serializers.ModelSerializer):
             queryset = queryset[: int(limit)]
         return AddingRecipesSerializer(queryset, many=True).data
 
-    def get_recipes_count(self, obj):
-        return obj.author.recipes.all().count()
-
 
 class CheckFollowSerializer(serializers.ModelSerializer):
     class Meta:
