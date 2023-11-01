@@ -8,6 +8,7 @@ class CustomUserAdmin(BaseUserAdmin):
     list_display = ("email", "username")
     list_filter = ("email", "username")
 
+
 class FollowAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "author")
     search_fields = ("user__username", "author__username")
@@ -15,5 +16,6 @@ class FollowAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'author')
+
 
 admin.site.register(Follow, FollowAdmin)

@@ -56,13 +56,13 @@ class RecipesViewSet(viewsets.ModelViewSet):
             .annotate(
                 is_favorited=Exists(
                     Favorite.objects.filter(
-                        user=OuterRef("author_id"), 
+                        user=OuterRef("author_id"),
                         recipe__pk=OuterRef("pk")
-                )
+                    )
                 ),
                 is_in_shopping_cart=Exists(
                     ShoppingBasket.objects.filter(
-                        user=OuterRef("author_id"), 
+                        user=OuterRef("author_id"),
                         recipe__pk=OuterRef("pk")
                     )
                 ),
