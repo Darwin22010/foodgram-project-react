@@ -11,7 +11,8 @@ PAGE_SIZE = 6
 
 SECRET_KEY = os.getenv('SECRET_KEY', default='token')
 
-DEBUG = os.getenv('DEBUG', default=False)
+DEBUG = True
+
 
 ALLOWED_HOSTS = os.getenv(
     'ALLOWED_HOSTS', default='127.0.0.1, localhost').split(', ')
@@ -37,6 +38,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.csrf.CsrfViewMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -71,10 +73,10 @@ WSGI_APPLICATION = "foodgram.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'django'),
+        'NAME': os.getenv('POSTGRES_DB', 'postgres'),
         'USER': os.getenv('POSTGRES_USER', 'darwin'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Darwin228'),
-        'HOST': os.getenv('DB_HOST', 'db'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', 5432)
     }
 }
