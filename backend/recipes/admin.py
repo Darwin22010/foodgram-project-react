@@ -11,9 +11,6 @@ class IngredientAdmin(admin.ModelAdmin):
     list_filter = ("name",)
     search_fields = ("name",)
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('recipe')
-
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):

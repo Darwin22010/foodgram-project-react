@@ -1,4 +1,2 @@
 # praktikum_new_diplom
-У меня возникли проблемы с запуском сайта на удаленном сервере, почему то мой бекэнд не запускается, а постоянно перезвапускается из за чего я не могу сделать миграции:
-foodgram-backend-1   darwin22010/foodgram_backend   "gunicorn foodgram.wsgi:application --bind 0:8000"   backend   19 seconds ago   Restarting (3) 1 second ago
-В логах пишет это: https://hastebin.com/share/monozakera.scss , не может найти модуль corsheaders, хотя в requirments я его закинул.
+При локальном запуске через Docker, не пускает в api/users с ошибкой 403, не могу где у меня ошибка с правами доступа. Также когда создаю суперюзеров для админки, когда сайт работает через докер он их не видит, но при локальном запуске бэкенда(runserver), все эти юзеры есть в списке пользователей.
