@@ -38,6 +38,11 @@ class TagAdmin(admin.ModelAdmin):
 
 
 @admin.register(IngredientInRecipe)
+class IngredientInRecipe(admin.ModelAdmin):
+    list_display = ('pk', 'recipe', 'ingredient', 'amount')
+
+
+@admin.register(IngredientInRecipe)
 class IngredientInRecipeAdmin(admin.ModelAdmin):
     list_display = ("pk", "recipe", "ingredient", "amount")
     search_fields = ("recipe__name", "ingredient__name")

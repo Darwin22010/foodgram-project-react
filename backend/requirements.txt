@@ -4,6 +4,7 @@ django-filter==2.4.0
 gunicorn==20.0.4
 psycopg2-binary==2.8.6
 djoser==2.1.0
+drf-yasg==1.20.0
 drf-extra-fields==3.1.1
 pillow==8.3.2
 reportlab==3.6.3
@@ -12,8 +13,6 @@ pytest==6.2.4
 pytest-django==4.4.0
 django-colorfield
 python-dotenv==0.19.0
-django-cors-headers==3.10.1
 django-extensions==3.1.5
 django-crum==0.7.9
-drf-yasg==1.20.0
-# Markdown==3.3.6
+drf_base64==2.0.0
