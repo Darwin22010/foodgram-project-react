@@ -11,7 +11,7 @@ PAGE_SIZE = 6
 
 SECRET_KEY = os.getenv('SECRET_KEY', default='token')
 
-DEBUG = True
+DEBUG = bool(int(os.getenv('DEBUG', '0')))
 
 
 ALLOWED_HOSTS = os.getenv(
@@ -27,7 +27,6 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "djoser",
-    "corsheaders",
     "django_filters",
     "users",
     "recipes",
@@ -38,9 +37,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.csrf.CsrfViewMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -48,8 +45,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "foodgram.urls"
-CORS_ORIGIN_ALLOW_ALL = True
-CORS_URLS_REGEX = r"^/api/.*$"
 
 TEMPLATES = [
     {

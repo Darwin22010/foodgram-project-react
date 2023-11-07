@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.db.models import Count, Prefetch
+from django.db.models import Count
 
 from .models import (Favorite, Ingredient, IngredientInRecipe, Recipe,
                      ShoppingBasket, Tag)
@@ -26,7 +26,7 @@ class RecipeAdmin(admin.ModelAdmin):
         return (
             super().get_queryset(request)
             .select_related('author')
-            .prefetch_related(Prefetch('tags'), Prefetch('ingredients'))
+            .prefetch_related('tags', 'ingredients')
             .annotate(favorites_count=Count('favorites'))
         )
 
@@ -47,6 +47,12 @@ class IngredientInRecipeAdmin(admin.ModelAdmin):
 class ShoppingBasketAdmin(admin.ModelAdmin):
     list_display = ("pk", "user", "recipe")
     search_fields = ("user__username", "recipe__name")
+
+    def get_queryset(self, request):
+        return (
+            super().get_queryset(request)
+            .select_related('user', 'recipe')
+        )
 
 
 @admin.register(Favorite)
