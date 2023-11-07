@@ -74,6 +74,7 @@ class ReadRecipesSerializer(serializers.ModelSerializer):
         )
 
     def get_ingredients(self, obj):
+        """Получение ингредиентов."""
         return obj.ingredients.values(
             "id",
             "name",
