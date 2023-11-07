@@ -59,3 +59,8 @@ class ShoppingBasketAdmin(admin.ModelAdmin):
 class FavoriteAdmin(admin.ModelAdmin):
     list_display = ("pk", "user", "recipe")
     search_fields = ("user__username", "recipe__name")
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.select_related('user', 'recipe')
+        return queryset
