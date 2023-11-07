@@ -15,7 +15,7 @@ class CustomUserCreateSerializer(UserCreateSerializer):
         validators=[UniqueValidator(queryset=User.objects.all())]
     )
     first_name = serializers.CharField()
-    last_name = serializers.CharField()
+    last_name = serializers.CharField(
 
     class Meta:
         model = User
