@@ -96,7 +96,8 @@ class ReadRecipesSerializer(serializers.ModelSerializer):
         )
 
 
-class WriteRecipeseSerializer(GetIngredientsMixin, serializers.ModelSerializer):
+class WriteRecipeseSerializer(GetIngredientsMixin, 
+                              serializers.ModelSerializer):
     """Сериализация объектов типа Recipes. Запись рецептов."""
 
     tags = serializers.PrimaryKeyRelatedField(
