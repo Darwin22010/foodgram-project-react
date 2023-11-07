@@ -2,7 +2,7 @@ from django.db.models import F
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_base64.fields import Base64ImageField
 from recipes.models import (Favorite, Ingredient, IngredientInRecipe, Recipe,
-                            ShoppingBasket, Tag)
+                            ShoppingBasket, Tag, TagInRecipe)
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.validators import UniqueValidator
@@ -96,82 +96,100 @@ class ReadRecipesSerializer(serializers.ModelSerializer):
         )
 
 
-class WriteRecipeseSerializer(GetIngredientsMixin,
-                              serializers.ModelSerializer):
-    """Сериализация объектов типа Recipes. Запись рецептов."""
+class IngredientInRecipeSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели ингредиентов в рецепте."""
 
+    id = serializers.ReadOnlyField(source='ingredient.id')
+    name = serializers.ReadOnlyField(source='ingredient.name')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit')
+
+    class Meta:
+        """Мета-параметры сериализатора"""
+
+        model = IngredientInRecipe
+        fields = ('id', 'name', 'measurement_unit', 'amount')
+
+
+class CreateRecipeSerializer(serializers.ModelSerializer):
+    """Сериализатор для создания рецептов"""
+
+    ingredients = IngredientInRecipeSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Tag.objects.all()
     )
-    ingredients = serializers.SerializerMethodField()
-    image = Base64ImageField()
+    image = Base64ImageField(use_url=True)
 
     class Meta:
+        """Мета-параметры сериализатора"""
+
         model = Recipe
-        fields = "__all__"
-        read_only_fields = ("author",)
+        fields = ('ingredients', 'tags', 'name',
+                  'image', 'text', 'cooking_time')
+
+    def to_representation(self, instance):
+        """Метод представления модели"""
+
+        serializer = ReadRecipesSerializer(
+            instance,
+            context={
+                'request': self.context.get('request')
+            }
+        )
+        return serializer.data
 
     def validate(self, data):
-        """Валидация ингредиентов при заполнении рецепта."""
-        ingredients = self.initial_data["ingredients"]
-        ingredient_list = []
-        if not ingredients:
-            raise serializers.ValidationError(
-                "Минимально должен быть 1 ингредиент."
-            )
-        for item in ingredients:
-            ingredient = get_object_or_404(Ingredient, id=item["id"])
-            if ingredient in ingredient_list:
+        """Метод валидации ингредиентов"""
+
+        ingredients = self.initial_data.get('ingredients')
+        lst_ingredient = []
+
+        for ingredient in ingredients:
+            if ingredient['id'] in lst_ingredient:
                 raise serializers.ValidationError(
-                    "Ингредиент не должен повторяться."
+                    'Ингредиенты должны быть уникальными!'
                 )
-            if int(item.get("amount")) < 1:
-                raise serializers.ValidationError("Минимальное количество = 1")
-            ingredient_list.append(ingredient)
-        data["ingredients"] = ingredients
+            lst_ingredient.append(ingredient['id'])
+
         return data
 
-    def validate_cooking_time(self, time):
-        """Валидация времени приготовления."""
-        if int(time) < 1:
-            raise serializers.ValidationError("Минимальное время = 1")
-        return time
+    def create_ingredients(self, ingredients, recipe):
+        """Метод создания ингредиента"""
 
-    def add_ingredients_and_tags(self, instance, **validate_data):
-        """Добавление ингредиентов тегов."""
-        ingredients = validate_data["ingredients"]
-        tags = validate_data["tags"]
-        for tag in tags:
-            instance.tags.add(tag)
+        for element in ingredients:
+            id = element['id']
+            ingredient = Ingredient.objects.get(pk=id)
+            amount = element['amount']
+            IngredientInRecipe.objects.create(
+                ingredient=ingredient, recipe=recipe, amount=amount
+            )
 
-        IngredientInRecipe.objects.bulk_create(
-            [
-                IngredientInRecipe(
-                    recipe=instance,
-                    ingredient_id=ingredient.get("id"),
-                    amount=ingredient.get("amount"),
-                )
-                for ingredient in ingredients
-            ]
-        )
-        return instance
+    def create_tags(self, tags, recipe):
+        """Метод добавления тега"""
+
+        recipe.tags.set(tags)
 
     def create(self, validated_data):
-        ingredients = validated_data.pop("ingredients")
-        tags = validated_data.pop("tags")
-        recipe = super().create(validated_data)
-        return self.add_ingredients_and_tags(
-            recipe, ingredients=ingredients, tags=tags
-        )
+        """Метод создания модели"""
+
+        ingredients = validated_data.pop('ingredients')
+        tags = validated_data.pop('tags')
+
+        user = self.context.get('request').user
+        recipe = Recipe.objects.create(**validated_data, author=user)
+        self.create_ingredients(ingredients, recipe)
+        self.create_tags(tags, recipe)
+        return recipe
 
     def update(self, instance, validated_data):
-        instance.ingredients.clear()
-        instance.tags.clear()
-        ingredients = validated_data.pop("ingredients")
-        tags = validated_data.pop("tags")
-        instance = self.add_ingredients_and_tags(
-            instance, ingredients=ingredients, tags=tags
-        )
+        """Метод обновления модели"""
+
+        IngredientInRecipe.objects.filter(recipe=instance).delete()
+        TagInRecipe.objects.filter(recipe=instance).delete()
+
+        self.create_ingredients(validated_data.pop('ingredients'), instance)
+        self.create_tags(validated_data.pop('tags'), instance)
+
         return super().update(instance, validated_data)
 
 
