@@ -16,10 +16,10 @@ from users.models import Follow, User
 
 from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly
-from .serializers import (FavoritesSerializer, FollowSerializer,
-                          IngredientsSerializer, ReadRecipesSerializer,
-                          ShoppingBasketsSerializer, TagsSerializer,
-                          WriteRecipeseSerializer)
+from .serializers import (CreateRecipeSerializer, FavoritesSerializer,
+                          FollowSerializer, IngredientsSerializer,
+                          ReadRecipesSerializer, ShoppingBasketsSerializer,
+                          TagsSerializer)
 
 
 class ListRetrieveViewSet(
@@ -48,7 +48,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.request.method in SAFE_METHODS:
             return ReadRecipesSerializer
-        return WriteRecipeseSerializer
+        return CreateRecipeSerializer
 
     def get_queryset(self):
         base_queryset = (
