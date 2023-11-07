@@ -96,7 +96,7 @@ class ReadRecipesSerializer(serializers.ModelSerializer):
         )
 
 
-class WriteRecipeseSerializer(GetIngredientsMixin, 
+class WriteRecipeseSerializer(GetIngredientsMixin,
                               serializers.ModelSerializer):
     """Сериализация объектов типа Recipes. Запись рецептов."""
 
