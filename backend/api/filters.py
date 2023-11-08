@@ -1,7 +1,30 @@
+from django.core.exceptions import ValidationError
 from django_filters import (FilterSet, ModelMultipleChoiceFilter, filters,
                             rest_framework)
-
 from recipes.models import Ingredient, Recipe, Tag
+
+
+class TagsMultipleChoiceField(filters.AllValuesMultipleFilter):
+    """Класс для фильтрации обьектов Tags."""
+
+    def validate(self, value):
+        if self.required and not value:
+            raise ValidationError(
+                self.error_messages["required"], code="required"
+            )
+        for val in value:
+            if val in self.choices and not self.valid_value(val):
+                raise ValidationError(
+                    self.error_messages["invalid_choice"],
+                    code="invalid_choice",
+                    params={"value": val},
+                )
+
+
+class TagsFilter(filters.AllValuesMultipleFilter):
+    """Класс для фильтрации обьектов Tags."""
+
+    field_class = TagsMultipleChoiceField
 
 
 class IngredientFilter(FilterSet):

@@ -4,6 +4,7 @@ from drf_base64.fields import Base64ImageField
 from recipes.models import (Favorite, Ingredient, IngredientInRecipe, Recipe,
                             ShoppingBasket, Tag)
 from rest_framework import serializers
+from rest_framework.generics import get_object_or_404
 from rest_framework.validators import UniqueValidator
 from users.models import Follow, User
 
@@ -100,37 +101,48 @@ class ReadRecipesSerializer(GetIngredientsMixin, serializers.ModelSerializer):
 
 class CreateRecipeSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Tag.objects.all())
-    ingredients = serializers.ListSerializer(child=serializers.DictField())
+        many=True, queryset=Tag.objects.all()
+    )
+    ingredients = serializers.SerializerMethodField()
     image = Base64ImageField()
 
     class Meta:
         model = Recipe
-        fields = ("ingredients", "tags", "name",
-                  "image", "text", "cooking_time")
+        fields = "__all__"
         read_only_fields = ("author",)
 
     def validate(self, data):
-        ingredients = data["ingredients"]
-        ingredient_ids = [item["id"] for item in ingredients]
-        if len(set(ingredient_ids)) != len(ingredient_ids):
+        """Валидация ингредиентов при заполнении рецепта."""
+        ingredients = self.initial_data["ingredients"]
+        ingredient_list = []
+        if not ingredients:
             raise serializers.ValidationError(
-                "Ингредиенты не должны повторяться.")
+                "Минимально должен быть 1 ингредиент."
+            )
         for item in ingredients:
-            if item["amount"] < 1:
-                raise serializers.ValidationError("Не меньше 1")
+            ingredient = get_object_or_404(Ingredient, id=item["id"])
+            if ingredient in ingredient_list:
+                raise serializers.ValidationError(
+                    "Ингредиент не должен повторяться."
+                )
+            if int(item.get("amount")) < 1:
+                raise serializers.ValidationError("Минимальное количество = 1")
+            ingredient_list.append(ingredient)
+        data["ingredients"] = ingredients
         return data
 
     def validate_cooking_time(self, time):
+        """Валидация времени приготовления."""
         if int(time) < 1:
-            raise serializers.ValidationError("Не меньше 1")
+            raise serializers.ValidationError("Минимальное время = 1")
         return time
 
     def add_ingredients_and_tags(self, instance, **validate_data):
+        """Добавление ингредиентов тегов."""
         ingredients = validate_data["ingredients"]
         tags = validate_data["tags"]
-        instance.ingredients.set(ingredients)
-        instance.tags.set(*tags)
+        for tag in tags:
+            instance.tags.add(tag)
 
         IngredientInRecipe.objects.bulk_create(
             [
@@ -246,16 +258,19 @@ class FavoritesSerializer(serializers.ModelSerializer):
         fields = ("user", "recipe")
 
     def validate(self, obj):
+        """Валидация добавления в избранное."""
         user = self.context["request"].user
         recipe = obj["recipe"]
         favorite = user.favourites.filter(recipe=recipe).exists()
 
         if self.context.get("request").method == "POST" and favorite:
             raise serializers.ValidationError(
-                "Этот рецепт уже добавлен в избранном")
+                "Этот рецепт уже добавлен в избранном"
+            )
         if self.context.get("request").method == "DELETE" and not favorite:
             raise serializers.ValidationError(
-                "Этот рецепт отсутствует в избранном")
+                "Этот рецепт отсутствует в избранном"
+            )
         return obj
 
 
