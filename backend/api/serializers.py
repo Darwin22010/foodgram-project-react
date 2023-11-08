@@ -24,6 +24,29 @@ class CustomUserCreateSerializer(UserCreateSerializer):
                   "first_name", "last_name", "password")
 
 
+class GetIsSubscribedMixin:
+    """Миксина отображения подписки на пользователя"""
+
+    def get_is_subscribed(self, obj):
+        user = self.context.get("request").user
+        if user.is_anonymous:
+            return False
+        return user.follower.filter(author=obj.id).exists()
+
+
+class GetIngredientsMixin:
+    """Миксин для рецептов."""
+
+    def get_ingredients(self, obj):
+        """Получение ингредиентов."""
+        return obj.ingredients.values(
+            "id",
+            "name",
+            "measurement_unit",
+            amount=F("ingredients_amount__amount"),
+        )
+
+
 class CustomUserListSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
 
@@ -51,7 +74,8 @@ class IngredientsSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "measurement_unit")
 
 
-class ReadRecipesSerializer(serializers.ModelSerializer):
+class ReadRecipesSerializer(GetIngredientsMixin, serializers.ModelSerializer):
+
     tags = TagsSerializer(many=True)
     author = CustomUserListSerializer()
     ingredients = serializers.SerializerMethodField()
@@ -71,15 +95,6 @@ class ReadRecipesSerializer(serializers.ModelSerializer):
             "image",
             "text",
             "cooking_time",
-        )
-
-    def get_ingredients(self, obj):
-        """Получение ингредиентов."""
-        return obj.ingredients.values(
-            "id",
-            "name",
-            "measurement_unit",
-            amount=F("ingredients_amount__amount"),
         )
 
 
@@ -130,22 +145,21 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         return instance
 
     def create(self, validated_data):
-        ingredients_data = validated_data.pop("ingredients")
+        ingredients = validated_data.pop("ingredients")
+        tags = validated_data.pop("tags")
         recipe = super().create(validated_data)
-        for item in ingredients_data:
-            IngredientInRecipe.objects.create(
-                recipe=recipe, ingredient_id=item["id"], amount=item["amount"]
-            )
-        return recipe
+        return self.add_ingredients_and_tags(
+            recipe, ingredients=ingredients, tags=tags
+        )
 
     def update(self, instance, validated_data):
         instance.ingredients.clear()
-        ingredients_data = validated_data.pop("ingredients")
-        for item in ingredients_data:
-            IngredientInRecipe.objects.create(
-                recipe=instance, ingredient_id=item["id"],
-                amount=item["amount"]
-            )
+        instance.tags.clear()
+        ingredients = validated_data.pop("ingredients")
+        tags = validated_data.pop("tags")
+        instance = self.add_ingredients_and_tags(
+            instance, ingredients=ingredients, tags=tags
+        )
         return super().update(instance, validated_data)
 
 
@@ -156,7 +170,9 @@ class AddingRecipesSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "name", "image", "cooking_time")
 
 
-class FollowSerializer(serializers.ModelSerializer):
+class FollowSerializer(GetIsSubscribedMixin, serializers.ModelSerializer):
+    """Сериализация объектов типа Follow. Подписки."""
+
     id = serializers.ReadOnlyField(source="author.id")
     email = serializers.ReadOnlyField(source="author.email")
     username = serializers.ReadOnlyField(source="author.username")
@@ -164,7 +180,7 @@ class FollowSerializer(serializers.ModelSerializer):
     last_name = serializers.ReadOnlyField(source="author.last_name")
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.IntegerField()
+    recipes_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Follow
@@ -180,12 +196,16 @@ class FollowSerializer(serializers.ModelSerializer):
         )
 
     def get_recipes(self, obj):
+        """Получение рецептов автора."""
         request = self.context.get("request")
         limit = request.GET.get("recipes_limit")
         queryset = obj.author.recipes.all()
         if limit:
             queryset = queryset[: int(limit)]
         return AddingRecipesSerializer(queryset, many=True).data
+
+    def get_recipes_count(self, obj):
+        return obj.author.recipes.all().count()
 
 
 class CheckFollowSerializer(serializers.ModelSerializer):
@@ -215,14 +235,6 @@ class CheckFollowSerializer(serializers.ModelSerializer):
                     {"errors": "Ошибка, вы уже отписались"}
                 )
         return obj
-
-
-class RecipeAddingSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Recipe
-        fields = ("id", "name", "image", "cooking_time")
-        read_only_fields = ("id", "name", "image", "cooking_time")
 
 
 class FavoritesSerializer(serializers.ModelSerializer):

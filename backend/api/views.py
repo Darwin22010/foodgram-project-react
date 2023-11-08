@@ -15,9 +15,9 @@ from users.models import Follow, User
 
 from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly
-from .serializers import (CreateRecipeSerializer, FavoritesSerializer,
-                          FollowSerializer, IngredientsSerializer,
-                          ReadRecipesSerializer, RecipeAddingSerializer,
+from .serializers import (AddingRecipesSerializer, CreateRecipeSerializer,
+                          FavoritesSerializer, FollowSerializer,
+                          IngredientsSerializer, ReadRecipesSerializer,
                           ShoppingBasketsSerializer, TagsSerializer)
 
 # from io import BytesIO
@@ -142,7 +142,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
         """Добавление объектов для избранного/спсика покупок."""
         recipe = get_object_or_404(Recipe, id=pk)
         model.objects.create(user=user, recipe=recipe)
-        serializer = RecipeAddingSerializer(recipe)
+        serializer = AddingRecipesSerializer(recipe)
         return Response(serializer.data, status=HTTPStatus.CREATED)
 
     @transaction.atomic()
