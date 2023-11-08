@@ -1,5 +1,6 @@
 from http import HTTPStatus
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import BooleanField, Exists, OuterRef, Sum, Value
 from django.http import HttpResponse
@@ -11,17 +12,17 @@ from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
-from users.models import Follow, User
+from users.models import Follow
 
 from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly
-from .serializers import (AddingRecipesSerializer, CreateRecipeSerializer,
-                          FavoritesSerializer, FollowSerializer,
-                          IngredientsSerializer, ReadRecipesSerializer,
-                          ShoppingBasketsSerializer, TagsSerializer)
+from .serializers import (AddingRecipesSerializer, CheckFollowSerializer,
+                          CreateRecipeSerializer, FavoritesSerializer,
+                          FollowSerializer, IngredientsSerializer,
+                          ReadRecipesSerializer, ShoppingBasketsSerializer,
+                          TagsSerializer)
 
-# from io import BytesIO
-
+User = get_user_model()
 
 FILE_NAME = "shopping-list.txt"
 TITLE_SHOP_LIST = "Список покупок с сайта Foodgram:\n\n"
@@ -34,12 +35,16 @@ class ListRetrieveViewSet(
 
 
 class TagsViewSet(ListRetrieveViewSet):
+    """Класс взаимодействия с моделью Tags. Вьюсет для списка тегов."""
+
     queryset = Tag.objects.all()
     serializer_class = TagsSerializer
     pagination_class = None
 
 
 class IngredientsViewSet(ListRetrieveViewSet):
+    """Класс взаимодействия с моделью Ingredients. Вьюсет для ингредиентов."""
+
     queryset = Ingredient.objects.all()
     serializer_class = IngredientsSerializer
     pagination_class = None
@@ -47,6 +52,8 @@ class IngredientsViewSet(ListRetrieveViewSet):
 
 
 class RecipesViewSet(viewsets.ModelViewSet):
+    """Класс взаимодействия с моделью Recipes. Вьюсет для рецептов."""
+
     permission_classes = (IsAdminAuthorOrReadOnly,)
     filter_class = RecipeFilter
 
@@ -176,6 +183,8 @@ class RecipesViewSet(viewsets.ModelViewSet):
 
 
 class FollowViewSet(UserViewSet):
+    """Класс взаимодействия с моделью Follow. Вьюсет подписок."""
+
     @action(
         methods=["POST"], detail=True, permission_classes=(IsAuthenticated,)
     )
@@ -188,7 +197,7 @@ class FollowViewSet(UserViewSet):
             "user": user.id,
             "author": author.id,
         }
-        serializer = FollowSerializer(
+        serializer = CheckFollowSerializer(
             data=data,
             context={"request": request},
         )
@@ -207,7 +216,7 @@ class FollowViewSet(UserViewSet):
             "user": user.id,
             "author": author.id,
         }
-        serializer = FollowSerializer(
+        serializer = CheckFollowSerializer(
             data=data,
             context={"request": request},
         )

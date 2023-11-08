@@ -9,22 +9,6 @@ from rest_framework.validators import UniqueValidator
 from users.models import Follow, User
 
 
-class CustomUserCreateSerializer(UserCreateSerializer):
-    email = serializers.EmailField(
-        validators=[UniqueValidator(queryset=User.objects.all())]
-    )
-    username = serializers.CharField(
-        validators=[UniqueValidator(queryset=User.objects.all())]
-    )
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
-
-    class Meta:
-        model = User
-        fields = ("id", "email", "username",
-                  "first_name", "last_name", "password")
-
-
 class GetIsSubscribedMixin:
     """Миксина отображения подписки на пользователя"""
 
@@ -48,34 +32,66 @@ class GetIngredientsMixin:
         )
 
 
-class CustomUserListSerializer(UserSerializer):
+class CustomUserCreateSerializer(UserCreateSerializer):
+    """Сериализация объектов типа User. Создание пользователя."""
+
+    email = serializers.EmailField(
+        validators=[UniqueValidator(queryset=User.objects.all())]
+    )
+    username = serializers.CharField(
+        validators=[UniqueValidator(queryset=User.objects.all())]
+    )
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "email",
+            "username",
+            "first_name",
+            "last_name",
+            "password",
+        )
+
+
+class CustomUserListSerializer(GetIsSubscribedMixin, UserSerializer):
+    """Сериализация объектов типа User. Просмотр пользователя."""
+
     is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("email", "id", "username", "first_name",
-                  "last_name", "is_subscribed")
+        fields = (
+            "email",
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "is_subscribed",
+        )
         read_only_fields = ("is_subscribed",)
-
-    def get_is_subscribed(self, obj):
-        user = self.context.get("request").user
-        return not user.is_anonymous and user.follower.filter(
-            author=obj.id).exists()
 
 
 class TagsSerializer(serializers.ModelSerializer):
+    """Сериализация объектов типа Tags. Список тегов."""
+
     class Meta:
         model = Tag
-        fields = ("id", "name", "color", "slug")
+        fields = "__all__"
 
 
 class IngredientsSerializer(serializers.ModelSerializer):
+    """Сериализация объектов типа Ingredients. Список ингредиентов."""
+
     class Meta:
         model = Ingredient
-        fields = ("id", "name", "measurement_unit")
+        fields = "__all__"
 
 
 class ReadRecipesSerializer(GetIngredientsMixin, serializers.ModelSerializer):
+    """Сериализация объектов типа Recipes. Чтение рецептов."""
 
     tags = TagsSerializer(many=True)
     author = CustomUserListSerializer()
@@ -85,21 +101,12 @@ class ReadRecipesSerializer(GetIngredientsMixin, serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = (
-            "id",
-            "tags",
-            "author",
-            "ingredients",
-            "is_favorited",
-            "is_in_shopping_cart",
-            "name",
-            "image",
-            "text",
-            "cooking_time",
-        )
+        fields = "__all__"
 
 
-class CreateRecipeSerializer(serializers.ModelSerializer):
+class CreateRecipeSerializer(GetIngredientsMixin, serializers.ModelSerializer):
+    """Сериализация объектов типа Recipes. Запись рецептов."""
+
     tags = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Tag.objects.all()
     )
@@ -176,6 +183,11 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
 
 class AddingRecipesSerializer(serializers.ModelSerializer):
+    """
+    Сериализация объектов типа Recipes.
+    Добавление в избранное/список покупок.
+    """
+
     class Meta:
         model = Recipe
         fields = ("id", "name", "image", "cooking_time")
@@ -221,11 +233,14 @@ class FollowSerializer(GetIsSubscribedMixin, serializers.ModelSerializer):
 
 
 class CheckFollowSerializer(serializers.ModelSerializer):
+    """Сериализация объектов типа Follow. Проверка подписки."""
+
     class Meta:
         model = Follow
         fields = ("user", "author")
 
     def validate(self, obj):
+        """Валидация подписки."""
         user = obj["user"]
         author = obj["author"]
         subscribed = user.follower.filter(author=author).exists()
@@ -250,6 +265,8 @@ class CheckFollowSerializer(serializers.ModelSerializer):
 
 
 class FavoritesSerializer(serializers.ModelSerializer):
+    """Сериализация объектов типа FavouriteRecipes. Проверка избранного."""
+
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
 
@@ -275,6 +292,8 @@ class FavoritesSerializer(serializers.ModelSerializer):
 
 
 class ShoppingBasketsSerializer(serializers.ModelSerializer):
+    """Сериализация объектов типа shoppingLists.Листа покупок."""
+
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
 
@@ -283,13 +302,15 @@ class ShoppingBasketsSerializer(serializers.ModelSerializer):
         fields = ("user", "recipe")
 
     def validate(self, obj):
+        """Валидация добавления в корзину."""
         user = self.context["request"].user
         recipe = obj["recipe"]
         shop_list = user.list.filter(recipe=recipe).exists()
 
         if self.context.get("request").method == "POST" and shop_list:
             raise serializers.ValidationError(
-                "Этот рецепт уже в списке покупок.")
+                "Этот рецепт уже в списке покупок."
+            )
         if self.context.get("request").method == "DELETE" and not shop_list:
             raise serializers.ValidationError("Рецепт не в списке покупок.")
         return obj
