@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from io import BytesIO
 
-# from django.db import transaction
+from django.db import transaction
 from django.db.models import Count, Exists, OuterRef, Sum
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
@@ -73,6 +73,17 @@ class RecipesViewSet(viewsets.ModelViewSet):
             return base_queryset.filter(author=self.request.user)
         return base_queryset
 
+    @transaction.atomic()
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    @action(
+        detail=True,
+        methods=('post', 'delete'),
+        permission_classes=(IsAuthenticated,),
+        url_path='favorite',
+        url_name='favorite',
+    )
     def favorite(self, request, pk):
         """Метод для управления избранными подписками """
 
@@ -99,8 +110,13 @@ class RecipesViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(detail=True, methods=["POST"],
-            permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=('post', 'delete'),
+        permission_classes=(IsAuthenticated,),
+        url_path='shopping_cart',
+        url_name='shopping_cart',
+    )
     def shopping_cart(self, request, pk=None):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
