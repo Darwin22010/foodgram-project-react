@@ -80,23 +80,29 @@ class RecipesViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["POST"],
             permission_classes=[IsAuthenticated])
     def favorite(self, request, pk=None):
-        user = request.user
-        recipe = get_object_or_404(Recipe, pk=pk)
+        """Добавить в избранное."""
+        data = {
+            "user": request.user.id,
+            "recipe": pk,
+        }
         serializer = FavoritesSerializer(
-            data={"user": user.id, "recipe": recipe.id})
+            data=data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(status=HTTPStatus.CREATED)
+        return self.add_object(Favorite, request.user, pk)
 
     @favorite.mapping.delete
     def del_favorite(self, request, pk=None):
-        user = request.user
-        deleted_count = Favorite.objects.filter(
-            user=user, recipe__pk=pk).delete()
-        if deleted_count[0] == 0:
-            return Response({"error": "Не существует"},
-                            status=HTTPStatus.BAD_REQUEST)
-        return Response(status=HTTPStatus.NO_CONTENT)
+        """Убрать из избранного."""
+        data = {
+            "user": request.user.id,
+            "recipe": pk,
+        }
+        serializer = FavoritesSerializer(
+            data=data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        return self.delete_object(Favorite, request.user, pk)
 
     @action(detail=True, methods=["POST"],
             permission_classes=[IsAuthenticated])
