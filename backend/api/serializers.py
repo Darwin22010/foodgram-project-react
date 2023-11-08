@@ -258,3 +258,14 @@ class ShoppingBasketsSerializer(serializers.ModelSerializer):
         if self.context.get("request").method == "DELETE" and not shop_list:
             raise serializers.ValidationError("Рецепт не в списке покупок.")
         return obj
+
+
+class AddFavoritesSerializer(serializers.ModelSerializer):
+    """Сериализатор для добавления в избранное по модели Recipe."""
+    image = Base64ImageField()
+
+    class Meta:
+        """Мета-параметры сериализатора"""
+
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
