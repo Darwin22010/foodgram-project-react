@@ -110,8 +110,8 @@ class RecipesViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(detail=True, methods=["POST"], 
-            permission_classes=[IsAuthenticated]) 
+    @action(detail=True, methods=["POST"],
+            permission_classes=[IsAuthenticated])
     def shopping_cart(self, request, pk=None):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
