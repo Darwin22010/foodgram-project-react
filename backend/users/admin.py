@@ -6,11 +6,14 @@ from .models import Follow
 
 User = get_user_model()
 
+
 class CustomUserAdmin(BaseUserAdmin):
     list_display = ("email", "username",)
     list_filter = ("email", "username")
 
+
 admin.site.register(User, CustomUserAdmin)
+
 
 class FollowAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "author")
@@ -19,5 +22,6 @@ class FollowAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'author')
+
 
 admin.site.register(Follow, FollowAdmin)
