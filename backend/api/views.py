@@ -65,24 +65,25 @@ class RecipesViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Резюме по объектам с помощью annotate()."""
+        queryset = Recipe.objects.all()
+
         if self.request.user.is_authenticated:
-            return Recipe.objects.annotate(
-                is_favorited=Exists(
-                    Favorite.objects.filter(
-                        user=self.request.user, recipe__pk=OuterRef("pk")
-                    )
-                ),
-                is_in_shopping_cart=Exists(
-                    ShoppingBasket.objects.filter(
-                        user=self.request.user, recipe__pk=OuterRef("pk")
-                    )
-                ),
+            queryset = queryset.filter(
+                favorites__user=self.request.user
+            ).annotate(
+                is_favorited=Value(True, output_field=BooleanField())
+            ).filter(
+                shopping_list__user=self.request.user
+            ).annotate(
+                is_in_shopping_cart=Value(True, output_field=BooleanField())
             )
         else:
-            return Recipe.objects.annotate(
+            queryset = queryset.annotate(
                 is_favorited=Value(False, output_field=BooleanField()),
-                is_in_shopping_cart=Value(False, output_field=BooleanField()),
+                is_in_shopping_cart=Value(False, output_field=BooleanField())
             )
+
+        return queryset
 
     @transaction.atomic()
     def perform_create(self, serializer):
