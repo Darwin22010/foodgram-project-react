@@ -217,6 +217,14 @@ class CheckFollowSerializer(serializers.ModelSerializer):
         return obj
 
 
+class RecipeAddingSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Recipe
+        fields = ("id", "name", "image", "cooking_time")
+        read_only_fields = ("id", "name", "image", "cooking_time")
+
+
 class FavoritesSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
