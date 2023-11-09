@@ -28,7 +28,7 @@ class TagsFilter(filters.AllValuesMultipleFilter):
     field_class = TagsMultipleChoiceField
 
 
-class IngredientSearchFilter(FilterSet):
+class IngredientFilter(FilterSet):
     """Класс для фильтрации обьектов Ingredients."""
 
     name = CharFilter(field_name="name", lookup_expr="icontains")
