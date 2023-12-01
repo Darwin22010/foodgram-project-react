@@ -1,6 +1,5 @@
 from http import HTTPStatus
 
-from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import BooleanField, Exists, OuterRef, Sum, Value
 from django.http import HttpResponse
@@ -12,17 +11,15 @@ from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
-from users.models import Follow
+from users.models import Follow, User
 
-from .filters import IngredientsSearchFilter, RecipesFilter
+from .filters import IngredientSearchFilter, RecipeFilter
 from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly
-from .serializers import (CheckFavouriteSerializer, CheckFollowSerializer,
-                          CheckShoppingCartSerializer, FollowSerializer,
-                          IngredientsSerializer, RecipeAddingSerializer,
-                          RecipesReadSerializer, RecipesWriteSerializer,
+from .serializers import (AddingRecipesSerializer, CheckFollowSerializer,
+                          CreateRecipeSerializer, FavoritesSerializer,
+                          FollowSerializer, IngredientsSerializer,
+                          ReadRecipesSerializer, ShoppingBasketsSerializer,
                           TagsSerializer)
-
-User = get_user_model()
 
 FILE_NAME = "shopping-list.txt"
 TITLE_SHOP_LIST = "Список покупок с сайта Foodgram:\n\n"
@@ -48,20 +45,20 @@ class IngredientsViewSet(ListRetrieveViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientsSerializer
     pagination_class = None
-    filter_class = IngredientsSearchFilter
+    filter_class = IngredientSearchFilter
 
 
 class RecipesViewSet(viewsets.ModelViewSet):
     """Класс взаимодействия с моделью Recipes. Вьюсет для рецептов."""
 
     permission_classes = (IsAdminAuthorOrReadOnly,)
-    filter_class = RecipesFilter
+    filter_class = RecipeFilter
 
     def get_serializer_class(self):
         """Сериализаторы для рецептов."""
         if self.request.method in SAFE_METHODS:
-            return RecipesReadSerializer
-        return RecipesWriteSerializer
+            return ReadRecipesSerializer
+        return CreateRecipeSerializer
 
     def get_queryset(self):
         """Резюме по объектам с помощью annotate()."""
@@ -97,7 +94,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
             "user": request.user.id,
             "recipe": pk,
         }
-        serializer = CheckFavouriteSerializer(
+        serializer = FavoritesSerializer(
             data=data, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
@@ -110,7 +107,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
             "user": request.user.id,
             "recipe": pk,
         }
-        serializer = CheckFavouriteSerializer(
+        serializer = FavoritesSerializer(
             data=data, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
@@ -125,7 +122,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
             "user": request.user.id,
             "recipe": pk,
         }
-        serializer = CheckShoppingCartSerializer(
+        serializer = ShoppingBasketsSerializer(
             data=data, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
@@ -138,7 +135,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
             "user": request.user.id,
             "recipe": pk,
         }
-        serializer = CheckShoppingCartSerializer(
+        serializer = ShoppingBasketsSerializer(
             data=data, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
@@ -149,7 +146,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
         """Добавление объектов для избранного/спсика покупок."""
         recipe = get_object_or_404(Recipe, id=pk)
         model.objects.create(user=user, recipe=recipe)
-        serializer = RecipeAddingSerializer(recipe)
+        serializer = AddingRecipesSerializer(recipe)
         return Response(serializer.data, status=HTTPStatus.CREATED)
 
     @transaction.atomic()

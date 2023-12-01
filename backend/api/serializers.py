@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.db.models import F
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_base64.fields import Base64ImageField
@@ -7,9 +6,7 @@ from recipes.models import (Favorite, Ingredient, IngredientInRecipe, Recipe,
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.validators import UniqueValidator
-from users.models import Follow
-
-User = get_user_model()
+from users.models import Follow, User
 
 
 class GetIsSubscribedMixin:
@@ -93,7 +90,7 @@ class IngredientsSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class RecipesReadSerializer(GetIngredientsMixin, serializers.ModelSerializer):
+class ReadRecipesSerializer(GetIngredientsMixin, serializers.ModelSerializer):
     """Сериализация объектов типа Recipes. Чтение рецептов."""
 
     tags = TagsSerializer(many=True)
@@ -107,7 +104,7 @@ class RecipesReadSerializer(GetIngredientsMixin, serializers.ModelSerializer):
         fields = "__all__"
 
 
-class RecipesWriteSerializer(GetIngredientsMixin, serializers.ModelSerializer):
+class CreateRecipeSerializer(GetIngredientsMixin, serializers.ModelSerializer):
     """Сериализация объектов типа Recipes. Запись рецептов."""
 
     tags = serializers.PrimaryKeyRelatedField(
@@ -185,7 +182,7 @@ class RecipesWriteSerializer(GetIngredientsMixin, serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class RecipeAddingSerializer(serializers.ModelSerializer):
+class AddingRecipesSerializer(serializers.ModelSerializer):
     """
     Сериализация объектов типа Recipes.
     Добавление в избранное/список покупок.
@@ -229,7 +226,7 @@ class FollowSerializer(GetIsSubscribedMixin, serializers.ModelSerializer):
         queryset = obj.author.recipes.all()
         if limit:
             queryset = queryset[: int(limit)]
-        return RecipeAddingSerializer(queryset, many=True).data
+        return AddingRecipesSerializer(queryset, many=True).data
 
     def get_recipes_count(self, obj):
         return obj.author.recipes.all().count()
@@ -267,7 +264,7 @@ class CheckFollowSerializer(serializers.ModelSerializer):
         return obj
 
 
-class CheckFavouriteSerializer(serializers.ModelSerializer):
+class FavoritesSerializer(serializers.ModelSerializer):
     """Сериализация объектов типа FavouriteRecipes. Проверка избранного."""
 
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
@@ -294,7 +291,7 @@ class CheckFavouriteSerializer(serializers.ModelSerializer):
         return obj
 
 
-class CheckShoppingCartSerializer(serializers.ModelSerializer):
+class ShoppingBasketsSerializer(serializers.ModelSerializer):
     """Сериализация объектов типа shoppingLists.Листа покупок."""
 
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
