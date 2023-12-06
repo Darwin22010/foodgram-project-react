@@ -1,7 +1,7 @@
-from django.core.exceptions import ValidationError
 from django_filters.fields import MultipleChoiceField
 from django_filters.rest_framework import CharFilter, FilterSet, filters
 from django_filters.widgets import BooleanWidget
+from django.core.exceptions import ValidationError
 from recipes.models import Ingredient, Recipe
 
 
@@ -13,12 +13,12 @@ class TagsMultipleChoiceField(MultipleChoiceField):
             raise ValidationError(
                 self.error_messages["required"], code="required"
             )
-        for val in value:
-            if val in self.choices and not self.valid_value(val):
+        for value in value:
+            if value in self.choices and not self.valid_value(value):
                 raise ValidationError(
                     self.error_messages["invalid_choice"],
                     code="invalid_choice",
-                    params={"value": val},
+                    params={"value": value},
                 )
 
 

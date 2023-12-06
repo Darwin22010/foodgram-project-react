@@ -10,7 +10,7 @@ from users.models import Follow, User
 
 
 class GetIsSubscribedMixin:
-    """Миксина отображения подписки на пользователя"""
+    """Миксина отображения подписки на пользователя."""
 
     def get_is_subscribed(self, obj):
         user = self.context.get("request").user
@@ -79,7 +79,7 @@ class TagsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
-        fields = "__all__"
+        fields = ('id', 'name', 'color', 'slug')
 
 
 class IngredientsSerializer(serializers.ModelSerializer):
@@ -87,7 +87,7 @@ class IngredientsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Ingredient
-        fields = "__all__"
+        fields = ('id', 'name', 'measurement_unit')
 
 
 class ReadRecipesSerializer(GetIngredientsMixin, serializers.ModelSerializer):
@@ -101,7 +101,10 @@ class ReadRecipesSerializer(GetIngredientsMixin, serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = "__all__"
+        fields = ('id', 'tags', 'author', 'ingredients',
+                  'is_favorited', 'is_in_shopping_cart', 'name',
+                  'image', 'text', 'cooking_time'
+                  )
 
 
 class CreateRecipeSerializer(GetIngredientsMixin, serializers.ModelSerializer):
@@ -115,7 +118,8 @@ class CreateRecipeSerializer(GetIngredientsMixin, serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = "__all__"
+        fields = ('ingredients', 'tags', 'name',
+                  'image', 'text', 'cooking_time')
         read_only_fields = ("author",)
 
     def validate(self, data):
@@ -145,11 +149,11 @@ class CreateRecipeSerializer(GetIngredientsMixin, serializers.ModelSerializer):
         return time
 
     def add_ingredients_and_tags(self, instance, **validate_data):
-        """Добавление ингредиентов тегов."""
+        """Добавление ингредиентов и тегов."""
         ingredients = validate_data["ingredients"]
         tags = validate_data["tags"]
-        for tag in tags:
-            instance.tags.add(tag)
+        instance.ingredients.add(*ingredients)
+        instance.tags.add(*tags)
 
         IngredientInRecipe.objects.bulk_create(
             [
@@ -194,6 +198,8 @@ class AddingRecipesSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "name", "image", "cooking_time")
 
 
+# serializers.py
+
 class FollowSerializer(GetIsSubscribedMixin, serializers.ModelSerializer):
     """Сериализация объектов типа Follow. Подписки."""
 
@@ -204,7 +210,8 @@ class FollowSerializer(GetIsSubscribedMixin, serializers.ModelSerializer):
     last_name = serializers.ReadOnlyField(source="author.last_name")
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(source='recipes_count',
+                                             read_only=True)
 
     class Meta:
         model = Follow
@@ -227,9 +234,6 @@ class FollowSerializer(GetIsSubscribedMixin, serializers.ModelSerializer):
         if limit:
             queryset = queryset[: int(limit)]
         return AddingRecipesSerializer(queryset, many=True).data
-
-    def get_recipes_count(self, obj):
-        return obj.author.recipes.all().count()
 
 
 class CheckFollowSerializer(serializers.ModelSerializer):

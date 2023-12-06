@@ -1,7 +1,8 @@
 from http import HTTPStatus
+from io import BytesIO
 
 from django.db import transaction
-from django.db.models import BooleanField, Exists, OuterRef, Sum, Value
+from django.db.models import BooleanField, Count, Exists, OuterRef, Sum, Value
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
@@ -21,8 +22,25 @@ from .serializers import (AddingRecipesSerializer, CheckFollowSerializer,
                           ReadRecipesSerializer, ShoppingBasketsSerializer,
                           TagsSerializer)
 
-FILE_NAME = "shopping-list.txt"
-TITLE_SHOP_LIST = "Список покупок с сайта Foodgram:\n\n"
+FILE_NAME = 'shopping-list.txt'
+TITLE_SHOP_LIST = 'Список покупок с сайта Foodgram:\n\n'
+
+
+def generate_shopping_cart_content(self, ingredients):
+    """Генерация содержимого файла листа покупок."""
+    content = BytesIO()
+    content.write(TITLE_SHOP_LIST.encode('utf-8'))
+    content.write(
+        "\n".join(
+            [
+                f'{ingredient["ingredient__name"]} - {ingredient["total"]}/'
+                f'{ingredient["ingredient__measurement_unit"]}'
+                for ingredient in ingredients
+            ]
+        ).encode('utf-8')
+    )
+    content.seek(0)
+    return content
 
 
 class ListRetrieveViewSet(
@@ -66,36 +84,35 @@ class RecipesViewSet(viewsets.ModelViewSet):
             return Recipe.objects.annotate(
                 is_favorited=Exists(
                     Favorite.objects.filter(
-                        user=self.request.user, recipe__pk=OuterRef("pk")
+                        user=self.request.user, recipe__pk=OuterRef('pk')
                     )
                 ),
                 is_in_shopping_cart=Exists(
                     ShoppingBasket.objects.filter(
-                        user=self.request.user, recipe__pk=OuterRef("pk")
+                        user=self.request.user, recipe__pk=OuterRef('pk')
                     )
                 ),
             )
-        else:
-            return Recipe.objects.annotate(
-                is_favorited=Value(False, output_field=BooleanField()),
-                is_in_shopping_cart=Value(False, output_field=BooleanField()),
-            )
+        return Recipe.objects.annotate(
+            is_favorited=Value(False, output_field=BooleanField()),
+            is_in_shopping_cart=Value(False, output_field=BooleanField()),
+        )
 
     @transaction.atomic()
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
     @action(
-        detail=True, methods=["POST"], permission_classes=(IsAuthenticated,)
+        detail=True, methods=['POST'], permission_classes=(IsAuthenticated,)
     )
     def favorite(self, request, pk=None):
         """Добавить в избранное."""
         data = {
-            "user": request.user.id,
-            "recipe": pk,
+            'user': request.user.id,
+            'recipe': pk,
         }
         serializer = FavoritesSerializer(
-            data=data, context={"request": request}
+            data=data, context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
         return self.add_object(Favorite, request.user, pk)
@@ -103,27 +120,25 @@ class RecipesViewSet(viewsets.ModelViewSet):
     @favorite.mapping.delete
     def del_favorite(self, request, pk=None):
         """Убрать из избранного."""
-        data = {
-            "user": request.user.id,
-            "recipe": pk,
-        }
-        serializer = FavoritesSerializer(
-            data=data, context={"request": request}
-        )
-        serializer.is_valid(raise_exception=True)
-        return self.delete_object(Favorite, request.user, pk)
+        favorite = Favorite.objects.filter(user=request.user, recipe=pk)
+        if favorite.exists():
+            favorite.delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        else:
+            return Response({'detail': 'Избранное не найдено.'},
+                            status=HTTPStatus.NOT_FOUND)
 
     @action(
-        detail=True, methods=["POST"], permission_classes=(IsAuthenticated,)
+        detail=True, methods=['POST'], permission_classes=(IsAuthenticated,)
     )
     def shopping_cart(self, request, pk=None):
         """Добавить в лист покупок."""
         data = {
-            "user": request.user.id,
-            "recipe": pk,
+            'user': request.user.id,
+            'recipe': pk,
         }
         serializer = ShoppingBasketsSerializer(
-            data=data, context={"request": request}
+            data=data, context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
         return self.add_object(ShoppingBasket, request.user, pk)
@@ -131,15 +146,14 @@ class RecipesViewSet(viewsets.ModelViewSet):
     @shopping_cart.mapping.delete
     def del_shopping_cart(self, request, pk=None):
         """Убрать из листа покупок."""
-        data = {
-            "user": request.user.id,
-            "recipe": pk,
-        }
-        serializer = ShoppingBasketsSerializer(
-            data=data, context={"request": request}
-        )
-        serializer.is_valid(raise_exception=True)
-        return self.delete_object(ShoppingBasket, request.user, pk)
+        shopping_cart_item = ShoppingBasket.objects.filter(
+            user=request.user, recipe=pk)
+        if shopping_cart_item.exists():
+            shopping_cart_item.delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        else:
+            return Response({'detail': 'Элемент листа покупок не найден.'},
+                            status=HTTPStatus.NOT_FOUND)
 
     @transaction.atomic()
     def add_object(self, model, user, pk):
@@ -166,15 +180,10 @@ class RecipesViewSet(viewsets.ModelViewSet):
             .order_by("ingredient__name")
             .annotate(total=Sum("amount"))
         )
-        result = TITLE_SHOP_LIST
-        result += "\n".join(
-            (
-                f'{ingredient["ingredient__name"]} - {ingredient["total"]}/'
-                f'{ingredient["ingredient__measurement_unit"]}'
-                for ingredient in ingredients
-            )
-        )
-        response = HttpResponse(result, content_type="text/plain")
+
+        content = self.generate_shopping_cart_content(ingredients)
+
+        response = HttpResponse(content, content_type="text/plain")
         response["Content-Disposition"] = f"attachment; filename={FILE_NAME}"
         return response
 
@@ -182,25 +191,24 @@ class RecipesViewSet(viewsets.ModelViewSet):
 class FollowViewSet(UserViewSet):
     """Класс взаимодействия с моделью Follow. Вьюсет подписок."""
 
-    @action(
-        methods=["POST"], detail=True, permission_classes=(IsAuthenticated,)
-    )
+    @action(methods=['POST'], detail=True,
+            permission_classes=(IsAuthenticated,))
     @transaction.atomic()
     def subscribe(self, request, id=None):
         """Подписка на автора."""
         user = request.user
         author = get_object_or_404(User, pk=id)
         data = {
-            "user": user.id,
-            "author": author.id,
+            'user': user.id,
+            'author': author.id,
         }
         serializer = CheckFollowSerializer(
             data=data,
-            context={"request": request},
+            context={'request': request},
         )
         serializer.is_valid(raise_exception=True)
         result = Follow.objects.create(user=user, author=author)
-        serializer = FollowSerializer(result, context={"request": request})
+        serializer = FollowSerializer(result, context={'request': request})
         return Response(serializer.data, status=HTTPStatus.CREATED)
 
     @subscribe.mapping.delete
@@ -209,25 +217,24 @@ class FollowViewSet(UserViewSet):
         """Отписка от автора."""
         user = request.user
         author = get_object_or_404(User, pk=id)
-        data = {
-            "user": user.id,
-            "author": author.id,
-        }
-        serializer = CheckFollowSerializer(
-            data=data,
-            context={"request": request},
-        )
-        serializer.is_valid(raise_exception=True)
-        user.follower.filter(author=author).delete()
-        return Response(status=HTTPStatus.NO_CONTENT)
+
+        subscription = user.follower.filter(author=author)
+
+        if subscription.exists():
+            subscription.delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        else:
+            return Response({'detail': 'Подписка не найдена.'},
+                            status=HTTPStatus.NOT_FOUND)
 
     @action(detail=False, permission_classes=(IsAuthenticated,))
     def subscriptions(self, request):
         """Подписки."""
         user = request.user
-        queryset = user.follower.all()
+        queryset = user.follower.annotate(
+            recipes_count=Count('author__recipes'))
         pages = self.paginate_queryset(queryset)
         serializer = FollowSerializer(
-            pages, many=True, context={"request": request}
+            pages, many=True, context={'request': request}
         )
         return self.get_paginated_response(serializer.data)
