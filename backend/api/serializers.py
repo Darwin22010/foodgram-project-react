@@ -198,8 +198,6 @@ class AddingRecipesSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "name", "image", "cooking_time")
 
 
-# serializers.py
-
 class FollowSerializer(GetIsSubscribedMixin, serializers.ModelSerializer):
     """Сериализация объектов типа Follow. Подписки."""
 

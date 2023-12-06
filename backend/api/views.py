@@ -26,23 +26,6 @@ FILE_NAME = 'shopping-list.txt'
 TITLE_SHOP_LIST = 'Список покупок с сайта Foodgram:\n\n'
 
 
-def generate_shopping_cart_content(self, ingredients):
-    """Генерация содержимого файла листа покупок."""
-    content = BytesIO()
-    content.write(TITLE_SHOP_LIST.encode('utf-8'))
-    content.write(
-        "\n".join(
-            [
-                f'{ingredient["ingredient__name"]} - {ingredient["total"]}/'
-                f'{ingredient["ingredient__measurement_unit"]}'
-                for ingredient in ingredients
-            ]
-        ).encode('utf-8')
-    )
-    content.seek(0)
-    return content
-
-
 class ListRetrieveViewSet(
     viewsets.GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin
 ):
@@ -169,6 +152,23 @@ class RecipesViewSet(viewsets.ModelViewSet):
         model.objects.filter(user=user, recipe__id=pk).delete()
         return Response(status=HTTPStatus.NO_CONTENT)
 
+    def generate_shopping_cart_content(self, ingredients):
+        """Генерация содержимого файла листа покупок."""
+        content = BytesIO()
+        content.write(TITLE_SHOP_LIST.encode('utf-8'))
+        content.write(
+            '\n'.join(
+                [
+                    f"{ingredient['ingredient__name']} - "
+                    f"{ingredient['total']}/"
+                    f"{ingredient['ingredient__measurement_unit']}"
+                    for ingredient in ingredients
+                ]
+            ).encode('utf-8')
+        )
+        content.seek(0)
+        return content
+
     @action(
         methods=["GET"], detail=False, permission_classes=(IsAuthenticated,)
     )
@@ -176,15 +176,15 @@ class RecipesViewSet(viewsets.ModelViewSet):
         """Скачать файл листа покупок."""
         ingredients = (
             IngredientInRecipe.objects.filter(recipe__list__user=request.user)
-            .values("ingredient__name", "ingredient__measurement_unit")
-            .order_by("ingredient__name")
-            .annotate(total=Sum("amount"))
+            .values('ingredient__name', 'ingredient__measurement_unit')
+            .order_by('ingredient__name')
+            .annotate(total=Sum('amount'))
         )
 
         content = self.generate_shopping_cart_content(ingredients)
 
-        response = HttpResponse(content, content_type="text/plain")
-        response["Content-Disposition"] = f"attachment; filename={FILE_NAME}"
+        response = HttpResponse(content, content_type='text/plain')
+        response['Content-Disposition'] = f'attachment; filename={FILE_NAME}'
         return response
 
 
