@@ -103,13 +103,12 @@ class RecipesViewSet(viewsets.ModelViewSet):
     @favorite.mapping.delete
     def del_favorite(self, request, pk=None):
         """Убрать из избранного."""
-        favorite = Favorite.objects.filter(user=request.user, recipe=pk)
-        if favorite.exists():
-            favorite.delete()
-            return Response(status=HTTPStatus.NO_CONTENT)
-        else:
+        deleted_count, _ = Favorite.objects.filter(
+            user=request.user, recipe=pk).delete()
+        if deleted_count == 0:
             return Response({'detail': 'Избранное не найдено.'},
                             status=HTTPStatus.NOT_FOUND)
+        return Response(status=HTTPStatus.NO_CONTENT)
 
     @action(
         detail=True, methods=['POST'], permission_classes=(IsAuthenticated,)
@@ -129,14 +128,12 @@ class RecipesViewSet(viewsets.ModelViewSet):
     @shopping_cart.mapping.delete
     def del_shopping_cart(self, request, pk=None):
         """Убрать из листа покупок."""
-        shopping_cart_item = ShoppingBasket.objects.filter(
-            user=request.user, recipe=pk)
-        if shopping_cart_item.exists():
-            shopping_cart_item.delete()
-            return Response(status=HTTPStatus.NO_CONTENT)
-        else:
+        deleted_count, _ = ShoppingBasket.objects.filter(
+            user=request.user, recipe=pk).delete()
+        if deleted_count == 0:
             return Response({'detail': 'Элемент листа покупок не найден.'},
                             status=HTTPStatus.NOT_FOUND)
+        return Response(status=HTTPStatus.NO_CONTENT)
 
     @transaction.atomic()
     def add_object(self, model, user, pk):
@@ -217,15 +214,11 @@ class FollowViewSet(UserViewSet):
         """Отписка от автора."""
         user = request.user
         author = get_object_or_404(User, pk=id)
-
-        subscription = user.follower.filter(author=author)
-
-        if subscription.exists():
-            subscription.delete()
-            return Response(status=HTTPStatus.NO_CONTENT)
-        else:
+        deleted_count, _ = user.follower.filter(author=author).delete()
+        if deleted_count == 0:
             return Response({'detail': 'Подписка не найдена.'},
                             status=HTTPStatus.NOT_FOUND)
+        return Response(status=HTTPStatus.NO_CONTENT)
 
     @action(detail=False, permission_classes=(IsAuthenticated,))
     def subscriptions(self, request):
