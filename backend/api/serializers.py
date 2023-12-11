@@ -118,7 +118,7 @@ class CreateRecipeSerializer(GetIngredientsMixin, serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('ingredients', 'tags', 'name',
+        fields = ('id', 'ingredients', 'tags', 'name',
                   'image', 'text', 'cooking_time')
         read_only_fields = ('author',)
 
@@ -238,7 +238,7 @@ class CheckFollowSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Follow
-        fields = ('user', 'author')
+        fields = ('id', 'user', 'author')
 
     def validate(self, obj):
         """Валидация подписки."""
@@ -273,7 +273,7 @@ class FavoritesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Favorite
-        fields = ('user', 'recipe')
+        fields = ('id', 'user', 'recipe')
 
     def validate(self, obj):
         """Валидация добавления в избранное."""
@@ -300,7 +300,7 @@ class ShoppingBasketsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShoppingBasket
-        fields = ('user', 'recipe')
+        fields = ('id', 'user', 'recipe')
 
     def validate(self, obj):
         """Валидация добавления в корзину."""
