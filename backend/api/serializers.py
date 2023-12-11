@@ -124,7 +124,7 @@ class CreateRecipeSerializer(GetIngredientsMixin, serializers.ModelSerializer):
 
     def validate(self, data):
         """Валидация ингредиентов при заполнении рецепта."""
-        ingredients = self.initial_data["ingredients"]
+        ingredients = data.get("ingredients")
         ingredient_list = []
         if not ingredients:
             raise serializers.ValidationError(
