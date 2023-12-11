@@ -11,14 +11,14 @@ class TagsMultipleChoiceField(MultipleChoiceField):
     def validate(self, value):
         if self.required and not value:
             raise ValidationError(
-                self.error_messages["required"], code="required"
+                self.error_messages['required'], code='required'
             )
         for value in value:
             if value in self.choices and not self.valid_value(value):
                 raise ValidationError(
-                    self.error_messages["invalid_choice"],
-                    code="invalid_choice",
-                    params={"value": value},
+                    self.error_messages['invalid_choice'],
+                    code='invalid_choice',
+                    params={'value': value},
                 )
 
 
@@ -31,27 +31,27 @@ class TagsFilter(filters.AllValuesMultipleFilter):
 class IngredientSearchFilter(FilterSet):
     """Класс для фильтрации обьектов Ingredients."""
 
-    name = CharFilter(field_name="name", lookup_expr="icontains")
+    name = CharFilter(field_name='name', lookup_expr='icontains')
 
     class Meta:
         model = Ingredient
-        fields = ("name",)
+        fields = ('name',)
 
 
 class RecipeFilter(FilterSet):
     """Класс для фильтрации обьектов Recipes."""
 
     author = filters.AllValuesMultipleFilter(
-        field_name="author__id", label="Автор"
+        field_name='author__id', label='Автор'
     )
     is_in_shopping_cart = filters.BooleanFilter(
-        widget=BooleanWidget(), label="В списке покупок."
+        widget=BooleanWidget(), label='В списке покупок.'
     )
     is_favorited = filters.BooleanFilter(
-        widget=BooleanWidget(), label="В избранном."
+        widget=BooleanWidget(), label='В избранном.'
     )
-    tags = TagsFilter(field_name="tags__slug")
+    tags = TagsFilter(field_name='tags__slug')
 
     class Meta:
         model = Recipe
-        fields = ("author", "tags", "is_in_shopping_cart", "is_favorited")
+        fields = ('author', 'tags', 'is_in_shopping_cart', 'is_favorited')
