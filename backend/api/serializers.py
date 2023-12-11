@@ -208,8 +208,7 @@ class FollowSerializer(GetIsSubscribedMixin, serializers.ModelSerializer):
     last_name = serializers.ReadOnlyField(source="author.last_name")
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.IntegerField(source='recipes_count',
-                                             read_only=True)
+    recipes_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Follow
