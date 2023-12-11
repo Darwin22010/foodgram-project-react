@@ -134,7 +134,7 @@ class CreateRecipeSerializer(GetIngredientsMixin, serializers.ModelSerializer):
             ingredient = get_object_or_404(Ingredient, id=item['id'])
             if ingredient in ingredient_list:
                 raise serializers.ValidationError(
-                    'Ингредиент не должен повторяться.'
+                    "Ингредиент не должен повторяться."
                 )
             if int(item.get('amount')) < 1:
                 raise serializers.ValidationError('Минимальное количество = 1')
@@ -145,15 +145,15 @@ class CreateRecipeSerializer(GetIngredientsMixin, serializers.ModelSerializer):
     def validate_cooking_time(self, time):
         """Валидация времени приготовления."""
         if int(time) < 1:
-            raise serializers.ValidationError('Минимальное время = 1')
+            raise serializers.ValidationError("Минимальное время = 1")
         return time
 
     def add_ingredients_and_tags(self, instance, **validate_data):
-        """Добавление ингредиентов и тегов."""
+        """Добавление ингредиентов тегов."""
         ingredients = validate_data['ingredients']
         tags = validate_data['tags']
-        instance.ingredients.add(*ingredients)
-        instance.tags.add(*tags)
+        for tag in tags:
+            instance.tags.add(tag)
 
         IngredientInRecipe.objects.bulk_create(
             [
@@ -238,7 +238,7 @@ class CheckFollowSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Follow
-        fields = ('id', 'user', 'author')
+        fields = ('user', 'author')
 
     def validate(self, obj):
         """Валидация подписки."""
@@ -273,7 +273,7 @@ class FavoritesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Favorite
-        fields = ('id', 'user', 'recipe')
+        fields = ('user', 'recipe')
 
     def validate(self, obj):
         """Валидация добавления в избранное."""
@@ -300,7 +300,7 @@ class ShoppingBasketsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShoppingBasket
-        fields = ('id', 'user', 'recipe')
+        fields = ('user', 'recipe')
 
     def validate(self, obj):
         """Валидация добавления в корзину."""
