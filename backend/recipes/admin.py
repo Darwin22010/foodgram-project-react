@@ -15,7 +15,7 @@ class IngredientAdmin(admin.ModelAdmin):
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ('name', 'pk', 'author', 'number_of_favorites', 'created')
     list_filter = ('author', 'tags')
-    search_fields = ('author', 'name', 'tags')
+    search_fields = ('name',)
 
     def number_of_favorites(self, obj):
         return obj.favorites_count
